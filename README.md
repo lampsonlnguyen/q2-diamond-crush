@@ -25,7 +25,17 @@ Download `q2-diamond-crush.zip` and extract the hidden `.diamond-crush` folder t
 
 On Ubuntu/WSL, install `clang lld gcc make python3 python3-pil zip`. The portable game tests run with `make check`, without any device dependencies.
 
-For `make`, install a **Shanling Q2 V1.36 sysroot** at `~/.cache/q2/sysroot`. As with [Q2 Groovebox](https://github.com/DiamondBond/q2-groovebox), prepare it from your own stock firmware ZIP using Rockbox's `tools/shanlingq2/mksysroot.sh`. It must contain `usr/include/alsa/asoundlib.h` and `lib/libasound.so.2`. A different location can be selected with `make SYSROOT=/path/to/sysroot`. The sysroot provides the device's glibc, ALSA, pthreads and dynamic loader.
+For `make`, install the Q2 audio sysroot at `~/.cache/q2/sysroot`. Follow [Q2 Groovebox](https://github.com/DiamondBond/q2-groovebox) and use the upstream [Rockbox sysroot helper](https://github.com/DiamondBond/q2-rockbox/blob/main/tools/shanlingq2/mksysroot.sh). **That helper requires the exact official `Q2 Firmware V1.32.zip`** (its checksum and internal archive path are pinned to V1.32), even if your device is running Q2 Pod based on V1.36. An already-prepared Groovebox sysroot can be reused.
+
+```sh
+sudo apt install clang lld gcc make python3 python3-pil zip unzip curl xz-utils binutils squashfs-tools
+git clone --depth 1 https://github.com/DiamondBond/q2-rockbox.git
+sh q2-rockbox/tools/shanlingq2/mksysroot.sh "/path/to/Q2 Firmware V1.32.zip" "$HOME/.cache/q2/sysroot"
+make check
+make
+```
+
+The sysroot must contain `usr/include/alsa/asoundlib.h` and `lib/libasound.so.2`. Override its location with `make SYSROOT=/path/to/sysroot`. It provides the device's glibc, ALSA, pthreads and dynamic loader.
 
 Run `make check && make` to create `dist/q2-diamond-crush.zip`. The MIPS binary has **no Python or PNG dependency on the Q2**; it does link against the firmware's existing shared audio libraries.
 
@@ -37,7 +47,7 @@ GitHub Actions runs portable tests on every push. Device ZIP builds and tag rele
 
 ## Credits
 
-Created in appreciation of DiamondBond's work on Q2 Pod. The card-app platform integration is adapted from the Q2 Arcade implementation and DiamondBond's Buddy. Licensed under GPL-3.0-or-later.
+Created in appreciation of DiamondBond's work on Q2 Pod. The card-app platform integration is adapted from the Q2 Arcade implementation and DiamondBond's Buddy. The combined program uses GPL version 3 because its ALSA device integration follows Groovebox (GPL-3.0-only); individual original source files retain their SPDX license headers.
 
 ## Audio
 
@@ -48,7 +58,7 @@ The app now requests the firmware's sound output with `audio=1` and plays four o
 - `match.wav` — a successful match
 - `combo.wav` — cascading matches
 
-`src/audio.c` reads the 22.05 kHz mono WAVs once from `.diamond-crush/sounds/`, plays them as 44.1 kHz stereo through ALSA, and accepts sound events without blocking touch or wheel input. It follows Groovebox's USB/Bluetooth output selection, soft-volume curve, DAC mute handling, and busy-PCM retry policy. **Q2 Pod 1.7.2 or later** is needed for the firmware audio handoff. If ALSA cannot open the device, the game remains playable without sound. Sound playback has not yet been tested on physical Q2 hardware.
+`src/audio.c` reads the PCM WAVs (44.1/48 kHz, mono or stereo, with optional metadata chunks) once from `.diamond-crush/sounds/`, mixes them to mono and resamples to 44.1 kHz stereo through ALSA, and accepts sound events without blocking touch or wheel input. It follows Groovebox's USB/Bluetooth output selection, soft-volume curve, DAC mute handling, and busy-PCM retry policy. **Q2 Pod 1.7.2 or later** is needed for the firmware audio handoff. If ALSA cannot open the device, the game remains playable without sound. Sound playback has not yet been tested on physical Q2 hardware.
 
 The firmware stops normal music playback when handing the audio output to a sound-enabled card game.
 

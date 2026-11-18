@@ -1,4 +1,4 @@
-# Native Q2 build: glibc + ALSA from the stock V1.36 sysroot (as in Groovebox).
+# Native Q2 build: glibc + ALSA from the Shanling Q2 V1.32 sysroot (as in Groovebox).
 SYSROOT ?= $(HOME)/.cache/q2/sysroot
 Q2_CC ?= clang
 Q2_LD ?= ld.lld
@@ -19,7 +19,7 @@ build/sprites.inc: tools/pack_sprites.py $(SPRITES)
 
 .PHONY: check-sysroot
 check-sysroot:
-	@test -f "$(SYSROOT)/usr/include/alsa/asoundlib.h" -a -f "$(SYSROOT)/lib/libasound.so.2" || (echo "Missing Q2 ALSA sysroot: $(SYSROOT). Build it from Shanling Q2 stock V1.36 using Rockbox's tools/shanlingq2/mksysroot.sh (see README)." >&2; exit 1)
+	@test -f "$(SYSROOT)/usr/include/alsa/asoundlib.h" -a -f "$(SYSROOT)/lib/libasound.so.2" || (echo "Missing Q2 ALSA sysroot: $(SYSROOT). Build it from the exact Shanling Q2 stock V1.32 ZIP using DiamondBond/q2-rockbox's tools/shanlingq2/mksysroot.sh (see README)." >&2; exit 1)
 
 build/q2/src/render.o: build/sprites.inc
 build/q2/%.o: %.c src/app.h src/game.h src/audio.h | check-sysroot

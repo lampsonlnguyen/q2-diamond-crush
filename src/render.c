@@ -7,12 +7,6 @@ static void fill(uint32_t*d,unsigned s,int x,int y,int w,int h,uint32_t c){
     if(w<=0||h<=0)return;
     for(int i=x;i<x+w;i++)for(int j=y;j<y+h;j++)d[i*s+SCREEN_H-1-j]=0xff000000u|c;
 }
-static void line(uint32_t*d,unsigned s,int x,int y,int xx,int yy,uint32_t c){
-    int dx=xx>x?xx-x:x-xx,dy=yy>y?yy-y:y-yy;
-    int sx=x<xx?1:-1,sy=y<yy?1:-1,err=dx-dy;
-    for(;;){fill(d,s,x,y,1,1,c);if(x==xx&&y==yy)break;
-        int e=2*err;if(e> -dy){err-=dy;x+=sx;}if(e<dx){err+=dx;y+=sy;}}
-}
 static void border(uint32_t*d,unsigned s,int x,int y,int w,int h,uint32_t c){
     fill(d,s,x,y,w,1,c);fill(d,s,x,y+h-1,w,1,c);
     fill(d,s,x,y,1,h,c);fill(d,s,x+w-1,y,1,h,c);

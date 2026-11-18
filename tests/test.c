@@ -34,6 +34,7 @@ int main(void){
     assert(a.game.cursor==18);
     assert(app_input(&a,"k u 218"));
     assert(a.game.selected==18);
+    assert(a.game.sound==4); /* selection sound requested */
     assert(app_input(&a,"k u 170"));
     assert(a.game.paused);
     assert(app_input(&a,"k u 218"));
@@ -41,7 +42,7 @@ int main(void){
     unsigned ok=0;
     for(int y=0;y<ROWS;y++)for(int x=0;x<COLS;x++){
         int cell=y*COLS+x;
-        if(x<COLS-1){Game g=a.game;if(game_swap(&g,cell,cell+1)){ok=1;assert(!game_has_matches(&g));assert(game_has_move(&g));}}
+        if(x<COLS-1){Game g=a.game;if(game_swap(&g,cell,cell+1)){ok=1;assert(g.sound==2||g.sound==3);assert(!game_has_matches(&g));assert(game_has_move(&g));}}
         if(y<ROWS-1){Game g=a.game;if(game_swap(&g,cell,cell+COLS)){ok=1;assert(!game_has_matches(&g));assert(game_has_move(&g));}}
     }
     assert(ok);

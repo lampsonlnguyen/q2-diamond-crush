@@ -11,7 +11,7 @@ jobs:
   test:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Host toolchain and sprite dependencies
         run: sudo apt-get update && sudo apt-get install -y gcc make python3 python3-pil libasound2-dev
       - name: Test the portable game engine
@@ -28,7 +28,7 @@ jobs:
     needs: test
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Install tools
         run: sudo apt-get update && sudo apt-get install -y clang lld make gcc python3 python3-pil zip unzip file curl binutils xz-utils squashfs-tools
       - name: Build Q2 firmware sysroot
@@ -55,7 +55,7 @@ jobs:
           unzip -p dist/q2-diamond-crush.zip .diamond-crush/q2app | grep -Fx 'game=1'
           unzip -p dist/q2-diamond-crush.zip .diamond-crush/q2app | grep -Fx 'audio=1'
           file dist/.diamond-crush/q2-diamond-crush | grep -E 'ELF 32-bit LSB.*MIPS'
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: q2-diamond-crush-card-app
           path: dist/q2-diamond-crush.zip
@@ -68,7 +68,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: q2-diamond-crush-card-app
           path: dist

@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-3.0-or-later
+/* SPDX-License-Identifier: GPL-3.0-only
  * Short WAV sound effects for Diamond Crush.
  * ALSA device handoff, DAC mute and retry policy follow Diamond Bond's
  * Q2 Groovebox (GPL-3.0-only): https://github.com/DiamondBond/q2-groovebox
@@ -24,7 +24,7 @@ enum { RATE = 44100, PERIOD = 256, EFFECTS = 4, MAX_FRAMES = 96000 };
 static const char *const names[EFFECTS] = {
     "invalid.wav", "match.wav", "combo.wav", "select.wav"
 };
-typedef struct { int16_t *pcm; unsigned length, rate; } Effect;
+typedef struct { int16_t *pcm; unsigned length, rate, step; } Effect;
 static Effect samples[EFFECTS];
 static snd_pcm_t *pcm;
 static pthread_t worker;
@@ -87,6 +87,7 @@ static void read_wav(const char *dir, int id) {
                 samples[id].pcm = mono_pcm;
                 samples[id].length = frames;
                 samples[id].rate = sample_rate;
+                samples[id].step = (unsigned)(((uint64_t)sample_rate << 16) / RATE);
                 mono_pcm = 0;
             }
             free(raw);
@@ -154,7 +155,7 @@ static void *audio_worker(void *unused) {
                     int b = effect->pcm[index + 1 < effect->length ? index + 1 : index];
                     unsigned frac = (unsigned)phase & 65535u;
                     v = a + (int)(((int64_t)(b - a) * frac) >> 16);
-                    phase += ((uint64_t)effect->rate << 16) / RATE;
+                    phase += effect->step;
                 } else current = -1;
             } else current = -1;
             v = (int)((int64_t)v * gain / 65536);
@@ -241,6 +242,6 @@ void audio_stop(void) {
     for (int i = 0; i < EFFECTS; ++i) {
         free(samples[i].pcm);
         samples[i].pcm = 0;
-        samples[i].length = samples[i].rate = 0;
+        samples[i].length = samples[i].rate = samples[i].step = 0;
     }
 }

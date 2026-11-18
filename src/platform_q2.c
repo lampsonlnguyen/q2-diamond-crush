@@ -44,7 +44,7 @@ static int config_light(int fallback) {
     char data[4096];
     int fd=(int)sc(SYS_OPEN,(long)"/mnt/data/config.ini",O_CLOEXEC,0,0,0,0);
     if(fd<0)return fallback;
-    long n=sc(SYS_READ,fd,(long)data,sizeof data-1,0,0,0,0);
+    long n=sc(SYS_READ,fd,(long)data,sizeof data-1,0,0,0);
     sc(SYS_CLOSE,fd,0,0,0,0,0);
     if(n<=0)return fallback;
     data[n]=0;

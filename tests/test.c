@@ -22,6 +22,9 @@ static void swipe(int dx,int dy) {
 }
 int main(void){
     swipe(1,0);swipe(-1,0);swipe(0,1);swipe(0,-1);
+    assert(COLS==8 && ROWS==5 && CELLS==40);
+    assert(GRID_X>=0 && GRID_X+COLS*PITCH<=SCREEN_W);
+    assert(GRID_Y+ROWS*PITCH<=SCREEN_H);
     App a;app_init(&a,1234,0);
     assert(!game_has_matches(&a.game));
     assert(game_has_move(&a.game));

@@ -73,10 +73,10 @@ static void piece(uint32_t *dst,unsigned stride,int x,int y,int type,int light){
 void app_render(const App *a,uint32_t*d,unsigned s){
     uint32_t bg=a->light?0xf3f3f5:0x080b14;
     uint32_t panel=a->light?0xffffff:0x111827;
-    uint32_t tile=a->light?0xe7e9f0:0x172237;
+    uint32_t tile=a->light?0x304762:0x172237;
     uint32_t ink=a->light?0x20242c:0xf3f2fa;
     uint32_t dim=a->light?0x646978:0xa1a8bb;
-    uint32_t border_c=a->light?0xadb4c2:0x354259;
+    uint32_t border_c=a->light?0x607b9c:0x354259;
     fill(d,s,0,0,SCREEN_W,SCREEN_H,bg);
     /* Keep the two small PNG sprites; draw the high-contrast banner in C.
        Light mode uses a dark navy header so white title and cat remain clear. */
@@ -96,10 +96,16 @@ void app_render(const App *a,uint32_t*d,unsigned s){
     number(d,s,40,61,a->game.score,1,ink);
     text(d,s,284,50,"BEST",1,dim);
     number(d,s,284,61,a->game.best,1,ink);
+    /* Light-mode board matches the header's dark navy / crisp outline.
+       Sprites remain small prepacked RGBA icons; backing is drawn in C. */
+    if(a->light){
+        fill(d,s,GRID_X-5,GRID_Y-5,COLS*PITCH+9,ROWS*PITCH+9,0x243652);
+        border(d,s,GRID_X-5,GRID_Y-5,COLS*PITCH+9,ROWS*PITCH+9,0x54759c);
+    }
     for(int y=0;y<ROWS;y++)for(int x=0;x<COLS;x++){
         int i=y*COLS+x,px=GRID_X+x*PITCH,py=GRID_Y+y*PITCH;
         uint32_t tc=tile,frame=border_c;
-        if(a->game.selected==i)tc=a->light?0xd8dcfb:0x303859;
+        if(a->game.selected==i)tc=a->light?0x4c5d82:0x303859;
         fill(d,s,px,py,CELL,CELL,tc);
         border(d,s,px,py,CELL,CELL,frame);
         if(!a->animation || (i!=a->swap_a && i!=a->swap_b))

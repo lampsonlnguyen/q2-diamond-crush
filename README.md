@@ -9,13 +9,13 @@ Six original pixel icons: thinking cat, diamond, martini, click-wheel player, mu
 Swap adjacent tiles to line up three or more identical pieces. Chains score extra points. There is **no timer, move limit, or game over**. The game reshuffles automatically when stuck.
 
 - **Touch:** tap one piece, then tap an adjacent piece to swap.
-- **Wheel:** move the selection through all 35 cells, wrapping from the last back to the first.
+- **Wheel:** move the selection through all 40 cells, wrapping from the last back to the first.
 - **Center:** select a piece, move with the wheel, then press Center to swap.
 - **Return:** pause; press Return again while paused to exit. Center resumes.
 - **Left / Right:** move the cursor by one cell.
 - **Play:** cancel a pending selection.
 
-Invalid swaps do not consume anything. The app starts in the firmware screen's detected light/dark appearance. The pieces retain distinct colors.
+Invalid swaps do not consume anything. The app starts in the firmware screen's detected light/dark appearance. The pieces retain distinct colors. Light theme uses a dark navy, high-contrast board background with darker tiles and clearer borders; both themes share the 5-row by 8-column layout.
 
 ## Install
 
@@ -66,4 +66,4 @@ The firmware stops normal music playback when handing the audio output to a soun
 
 Each playable piece is a separate transparent 32×32 RGBA PNG under `assets/sprites/`, ordered by piece ID: cat, diamond, martini, iPod-style player, music note, headphones. Run `python3 tools/pack_sprites.py` to regenerate `build/sprites.inc`; `make` runs it automatically. Never edit generated C sprites by hand. All sprites use one pixel coordinate system; rendering uses alpha blending for light and dark themes. Only the PNG sources and packer are tracked; generated `build/` files are ignored. The original artwork was created for this project.
 
-The board has **7 columns × 5 rows**. Swipe a piece up, down, left, or right to swap with its neighbor. Swaps slide with smooth easing; moves without a match slide back. Wheel/Center swaps use the same effect. The iPod artwork is fitted to its 32×32 tile without transparent padding.
+The board has **8 columns × 5 rows**. Swipe a piece up, down, left, or right to swap with its neighbor. Swaps slide with smooth easing; moves without a match slide back. Wheel/Center swaps use the same effect. The iPod artwork is fitted to its 32×32 tile without transparent padding.

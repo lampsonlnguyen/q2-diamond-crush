@@ -16,6 +16,7 @@ static int swap_start(App *a,int from,int to) {
     int dx=from%COLS-to%COLS,dy=from/COLS-to/COLS;
     if(from<0||to<0||from>=CELLS||to>=CELLS||dx*dx+dy*dy!=1)return 0;
     a->swap_a=from;a->swap_b=to;a->animation=1;a->animation_ms=0;
+    a->game.sound=4; /* swap-start tick */
     a->game.selected=-1;return 1;
 }
 int app_tick(App *a,unsigned elapsed) {
@@ -37,7 +38,7 @@ static int grid_pos(int x,int y) {
 static int choose(App *a,int pos) {
     Game *g=&a->game;
     if(g->paused)return 0;
-    if(g->selected<0) {g->selected=pos;g->cursor=pos;return 1;}
+    if(g->selected<0) {g->selected=pos;g->cursor=pos;g->sound=4;return 1;}
     if(g->selected==pos) {g->selected=-1;return 1;}
     int old=g->selected;
     if(swap_start(a,old,pos))return 1;

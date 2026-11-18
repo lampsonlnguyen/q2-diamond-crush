@@ -17,14 +17,14 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
-enum { RATE = 44100, PERIOD = 256, EFFECTS = 4, MAX_SAMPLES = 6000 };
+enum { RATE = 44100, PERIOD = 256, EFFECTS = 4, MAX_FRAMES = 96000 };
 #define DAC "/dev/shanling_dac"
 #define DAC_PCM 0xc0044d1bu
 #define DAC_MUTE 0xc0044d1fu
 static const char *const names[EFFECTS] = {
     "invalid.wav", "match.wav", "combo.wav", "select.wav"
 };
-typedef struct { int16_t pcm[MAX_SAMPLES]; unsigned length; } Effect;
+typedef struct { int16_t *pcm; unsigned length, rate; } Effect;
 static Effect samples[EFFECTS];
 static snd_pcm_t *pcm;
 static pthread_t worker;
@@ -37,24 +37,63 @@ static unsigned le16(const unsigned char *p) { return (unsigned)p[0] | (unsigned
 static unsigned le32(const unsigned char *p) {
     return le16(p) | le16(p + 2) << 16;
 }
+/* Read 16-bit PCM RIFF/WAVE, including optional LIST or metadata chunks.
+ * The supplied files contain mono/stereo, 44.1/48 kHz and a LIST chunk.
+ * Convert stereo to mono once; the 44.1 kHz audio worker resamples on play.
+ */
 static void read_wav(const char *dir, int id) {
     char path[512];
     snprintf(path, sizeof path, "%s/sounds/%s", dir, names[id]);
     FILE *f = fopen(path, "rb");
     if (!f) return;
-    unsigned char h[44];
-    if (fread(h, 1, sizeof h, f) == sizeof h &&
-        !memcmp(h, "RIFF", 4) && !memcmp(h + 8, "WAVEfmt ", 8) &&
-        !memcmp(h + 36, "data", 4) && le32(h + 16) == 16 &&
-        le16(h + 20) == 1 && le16(h + 22) == 1 &&
-        le32(h + 24) == 22050 && le16(h + 34) == 16) {
-        unsigned n = le32(h + 40) / 2;
-        if (n > MAX_SAMPLES) n = MAX_SAMPLES;
-        for (unsigned i = 0; i < n; ++i) {
-            unsigned char b[2];
-            if (fread(b, 1, 2, f) != 2) break;
-            samples[id].pcm[samples[id].length++] = (int16_t)le16(b);
-        }
+    unsigned char riff[12];
+    unsigned format = 0, channels = 0, sample_rate = 0, bits = 0;
+    if (fread(riff, 1, sizeof riff, f) != sizeof riff ||
+        memcmp(riff, "RIFF", 4) || memcmp(riff + 8, "WAVE", 4)) {
+        fclose(f);
+        return;
+    }
+    for (int chunk = 0; chunk < 64; ++chunk) {
+        unsigned char h[8];
+        if (fread(h, 1, sizeof h, f) != sizeof h) break;
+        unsigned bytes = le32(h + 4);
+        if (bytes > 2000000) break; /* Reject unreasonable or corrupt WAVs. */
+        if (!memcmp(h, "fmt ", 4) && bytes >= 16) {
+            unsigned char fmt[16];
+            if (fread(fmt, 1, sizeof fmt, f) != sizeof fmt) break;
+            format = le16(fmt);
+            channels = le16(fmt + 2);
+            sample_rate = le32(fmt + 4);
+            bits = le16(fmt + 14);
+            if (bytes > 16 && fseek(f, (long)(bytes - 16), SEEK_CUR)) break;
+        } else if (!memcmp(h, "data", 4)) {
+            if (format != 1 || (channels != 1 && channels != 2) ||
+                bits != 16 || sample_rate < 8000 || sample_rate > 96000) break;
+            unsigned frames = bytes / (2u * channels);
+            if (frames > MAX_FRAMES) frames = MAX_FRAMES;
+            if (!frames) break;
+            size_t raw_bytes = (size_t)frames * channels * 2;
+            unsigned char *raw = malloc(raw_bytes);
+            int16_t *mono_pcm = malloc((size_t)frames * sizeof(int16_t));
+            if (raw && mono_pcm && fread(raw, 1, raw_bytes, f) == raw_bytes) {
+                for (unsigned i = 0; i < frames; ++i) {
+                    const unsigned char *p = raw + (size_t)i * channels * 2;
+                    int left = (int16_t)le16(p);
+                    int v = left;
+                    if (channels == 2)
+                        v = (left + (int)(int16_t)le16(p + 2)) / 2;
+                    mono_pcm[i] = (int16_t)v;
+                }
+                samples[id].pcm = mono_pcm;
+                samples[id].length = frames;
+                samples[id].rate = sample_rate;
+                mono_pcm = 0;
+            }
+            free(raw);
+            free(mono_pcm);
+            break;
+        } else if (fseek(f, (long)bytes, SEEK_CUR)) break;
+        if ((bytes & 1u) && fseek(f, 1, SEEK_CUR)) break;
     }
     fclose(f);
 }
@@ -92,14 +131,14 @@ static int soft_gain(const char *volume) {
 static void *audio_worker(void *unused) {
     (void)unused;
     short out[PERIOD * 2];
-    unsigned pos = 0;
+    uint64_t phase = 0;
     int current = -1;
     unsigned passes = 0;
     while (__atomic_load_n(&running, __ATOMIC_ACQUIRE)) {
         int next = __atomic_exchange_n(&pending, 0, __ATOMIC_ACQ_REL);
         if (next >= 1 && next <= EFFECTS) {
             current = next - 1;
-            pos = 0;
+            phase = 0;
         }
         if (!(passes++ % 100)) {
             if (!mono) mono = map_flag("/tmp/q2mono");
@@ -107,9 +146,16 @@ static void *audio_worker(void *unused) {
         }
         for (unsigned i = 0; i < PERIOD; ++i) {
             int v = 0;
-            if (current >= 0 && pos / 2 < samples[current].length) {
-                v = (int)samples[current].pcm[pos / 2];
-                ++pos; /* 22.05 kHz source played at 44.1 kHz */
+            if (current >= 0 && samples[current].pcm) {
+                const Effect *effect = &samples[current];
+                unsigned index = (unsigned)(phase >> 16);
+                if (index < effect->length) {
+                    int a = effect->pcm[index];
+                    int b = effect->pcm[index + 1 < effect->length ? index + 1 : index];
+                    unsigned frac = (unsigned)phase & 65535u;
+                    v = a + (int)(((int64_t)(b - a) * frac) >> 16);
+                    phase += ((uint64_t)effect->rate << 16) / RATE;
+                } else current = -1;
             } else current = -1;
             v = (int)((int64_t)v * gain / 65536);
             if (v > 32767) v = 32767;
@@ -135,7 +181,11 @@ int audio_start(const char *app_path, const char *device, const char *volume) {
     char *slash = strrchr(dir, '/');
     if (slash) *slash = 0;
     else snprintf(dir, sizeof dir, ".");
-    for (int i = 0; i < EFFECTS; ++i) read_wav(dir, i);
+    for (int i = 0; i < EFFECTS; ++i) {
+        read_wav(dir, i);
+        /* Older launchers may supply only the executable basename. */
+        if (!samples[i].pcm) read_wav("/mnt/mmc/.diamond-crush", i);
+    }
     char usb[16];
     const char *dev = device && *device ? device : "plughw:0,0";
     if (!strcmp(dev, "-")) return 0;
@@ -175,17 +225,22 @@ void audio_play(int event) {
         __atomic_store_n(&pending, event, __ATOMIC_RELEASE);
 }
 void audio_stop(void) {
-    if (!pcm) return;
-    if (active) {
-        __atomic_store_n(&running, 0, __ATOMIC_RELEASE);
-        /* Wake blocked ALSA output, then join before freeing the handle. */
-        snd_pcm_drop(pcm);
-        pthread_join(worker, 0);
-        active = 0;
+    if (pcm) {
+        if (active) {
+            __atomic_store_n(&running, 0, __ATOMIC_RELEASE);
+            snd_pcm_drop(pcm); /* Unblock a write if needed. */
+            pthread_join(worker, 0);
+            active = 0;
+        }
+        snd_pcm_close(pcm);
+        pcm = 0;
     }
-    snd_pcm_close(pcm);
-    pcm = 0;
     if (mono) { munmap((void *)mono, sizeof(int)); mono = 0; }
     if (swap) { munmap((void *)swap, sizeof(int)); swap = 0; }
     if (jack) dac_set(DAC_MUTE, 1);
+    for (int i = 0; i < EFFECTS; ++i) {
+        free(samples[i].pcm);
+        samples[i].pcm = 0;
+        samples[i].length = samples[i].rate = 0;
+    }
 }

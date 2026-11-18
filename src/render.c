@@ -54,7 +54,7 @@ static void number(uint32_t*d,unsigned s,int x,int y,uint32_t n,int k,uint32_t c
     for(int i=0;i<len/2;i++){char q=str[i];str[i]=str[len-1-i];str[len-1-i]=q;}
     str[len]=0;text(d,s,x,y,str,k,c);
 }
-/* Generated at build-time from assets/sprites/*.png; no runtime PNG decoder. */
+/* Generated at build-time from assets/sprites PNG files; no runtime PNG decoder. */
 #include "sprites.inc"
 static void piece(uint32_t *dst,unsigned stride,int x,int y,int type,int light){
     (void)light;

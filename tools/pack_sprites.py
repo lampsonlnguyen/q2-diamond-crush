@@ -12,7 +12,7 @@ root = Path(__file__).resolve().parent.parent
 out = Path(sys.argv[1]) if len(sys.argv) > 1 else root / "build/sprites.inc"
 out.parent.mkdir(parents=True, exist_ok=True)
 with out.open("w", encoding="utf-8") as handle:
-    handle.write("/* Auto-generated from assets/sprites/*.png. Do not edit. */\n")
+    handle.write("/* Auto-generated from assets/sprites PNG files. Do not edit. */\n")
     handle.write("static const uint32_t sprite_pixels[6][1024] = {\n")
     for name in NAMES:
         image = Image.open(root / "assets" / "sprites" / (name + ".png")).convert("RGBA")

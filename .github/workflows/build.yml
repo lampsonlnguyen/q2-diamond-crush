@@ -13,9 +13,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Host toolchain and sprite dependencies
-        run: sudo apt-get update && sudo apt-get install -y gcc make python3 python3-pil
+        run: sudo apt-get update && sudo apt-get install -y gcc make python3 python3-pil libasound2-dev
       - name: Test the portable game engine
         run: make check
+      - name: Check ALSA and device-runtime C syntax
+        run: |
+          cc -std=gnu11 -O2 -Wall -Wextra -Werror -Isrc -fsyntax-only src/audio.c
+          cc -std=gnu11 -O2 -Wall -Wextra -Werror -Isrc -fsyntax-only src/platform_q2.c
 
   device-build:
     # Q2 ALSA requires a sysroot derived from the user's stock firmware.

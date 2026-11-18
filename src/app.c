@@ -56,7 +56,7 @@ int app_input(App *a,const char *message) {
         a->wheel_rem%=18;
         if(steps>12)steps=12;
         if(steps< -12)steps=-12;
-        /* Full ring navigation, then wrap; every one of 35 tiles is reachable. */
+        /* Full ring navigation, then wrap; every board tile is reachable. */
         if(steps)g->cursor=(g->cursor+steps%CELLS+CELLS)%CELLS;
         return steps!=0;
     }

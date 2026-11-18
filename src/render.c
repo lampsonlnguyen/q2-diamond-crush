@@ -1,6 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 #include "app.h"
-static const uint32_t colors[6]={0xd7dde9,0x32dff1,0x76d98d,0xd4d8ef,0xc66bfa,0xff6478};
 static void fill(uint32_t*d,unsigned s,int x,int y,int w,int h,uint32_t c){
     if(x<0){w+=x;x=0;}if(y<0){h+=y;y=0;}
     if(x+w>SCREEN_W)w=SCREEN_W-x;
@@ -55,60 +54,24 @@ static void number(uint32_t*d,unsigned s,int x,int y,uint32_t n,int k,uint32_t c
     for(int i=0;i<len/2;i++){char q=str[i];str[i]=str[len-1-i];str[len-1-i]=q;}
     str[len]=0;text(d,s,x,y,str,k,c);
 }
-static void circle(uint32_t*d,unsigned s,int cx,int cy,int r,uint32_t c){
-    for(int yy=-r;yy<=r;yy++)for(int xx=-r;xx<=r;xx++)
-        if(xx*xx+yy*yy<=r*r)fill(d,s,cx+xx,cy+yy,1,1,c);
-}
-static void piece(uint32_t*d,unsigned s,int x,int y,int type,int light){
-    uint32_t c=colors[type];uint32_t shadow=light?0x252b34:0x0a1524;
-    switch(type){
-    case 0: /* thinking cat: ears, whiskers and paw at chin */
-        fill(d,s,x+9,y+12,19,15,c);
-        line(d,s,x+9,y+12,x+8,y+5,c);
-        line(d,s,x+8,y+5,x+16,y+11,c);
-        line(d,s,x+27,y+12,x+28,y+5,c);
-        line(d,s,x+28,y+5,x+20,y+11,c);
-        fill(d,s,x+13,y+17,3,2,shadow);fill(d,s,x+23,y+17,3,2,shadow);
-        fill(d,s,x+18,y+22,3,2,0xea91a0);
-        line(d,s,x+9,y+23,x+3,y+21,c);
-        line(d,s,x+27,y+23,x+33,y+21,c);
-        circle(d,s,x+17,y+28,5,c);fill(d,s,x+18,y+24,4,4,shadow);
-        break;
-    case 1: /* faceted diamond */
-        line(d,s,x+9,y+10,x+26,y+10,c);line(d,s,x+5,y+18,x+30,y+18,c);
-        line(d,s,x+9,y+10,x+5,y+18,c);line(d,s,x+26,y+10,x+30,y+18,c);
-        line(d,s,x+5,y+18,x+18,y+32,c);line(d,s,x+30,y+18,x+18,y+32,c);
-        line(d,s,x+13,y+10,x+12,y+18,c);line(d,s,x+23,y+10,x+24,y+18,c);
-        line(d,s,x+12,y+18,x+18,y+32,c);line(d,s,x+24,y+18,x+18,y+32,c);
-        fill(d,s,x+14,y+13,8,2,c);
-        break;
-    case 2: /* martini */
-        line(d,s,x+7,y+10,x+29,y+10,c);line(d,s,x+7,y+10,x+18,y+23,c);
-        line(d,s,x+29,y+10,x+18,y+23,c);
-        line(d,s,x+18,y+23,x+18,y+31,c);line(d,s,x+10,y+31,x+26,y+31,c);
-        line(d,s,x+24,y+12,x+31,y+5,c);circle(d,s,x+23,y+15,3,0xe55357);
-        break;
-    case 3: /* generic click-wheel music player */
-        fill(d,s,x+10,y+5,17,28,c);
-        fill(d,s,x+13,y+8,11,9,shadow);
-        circle(d,s,x+18,y+25,6,0x67758b);
-        circle(d,s,x+18,y+25,2,c);
-        break;
-    case 4: /* music note */
-        fill(d,s,x+20,y+7,4,17,c);fill(d,s,x+23,y+7,8,4,c);
-        line(d,s,x+23,y+7,x+29,y+13,c);
-        circle(d,s,x+15,y+26,6,c);fill(d,s,x+14,y+21,6,3,c);
-        break;
-    case 5: /* headphones */
-        for(int yy=8;yy<17;yy++) {
-            int spread=yy<12?5:9;
-            fill(d,s,x+18-spread,y+yy,2,1,c);
-            fill(d,s,x+18+spread-1,y+yy,2,1,c);
-        }
-        line(d,s,x+13,y+8,x+23,y+8,c);
-        fill(d,s,x+6,y+16,7,14,c);fill(d,s,x+23,y+16,7,14,c);
-        fill(d,s,x+9,y+20,3,7,shadow);fill(d,s,x+23,y+20,3,7,shadow);
-        break;
+/* Generated at build-time from assets/sprites/*.png; no runtime PNG decoder. */
+#include "sprites.inc"
+static void piece(uint32_t *dst,unsigned stride,int x,int y,int type,int light){
+    (void)light;
+    if(type<0 || type>=6)return;
+    for(int sy=0;sy<32;sy++)for(int sx=0;sx<32;sx++){
+        int xx=x+sx,yy=y+sy;
+        if(xx<0||xx>=SCREEN_W||yy<0||yy>=SCREEN_H)continue;
+        uint32_t p=sprite_pixels[type][sy*32+sx];
+        unsigned a=p>>24;
+        if(!a)continue;
+        uint32_t *target=dst+xx*stride+SCREEN_H-1-yy;
+        if(a==255){*target=0xff000000u|(p&0xffffffu);continue;}
+        uint32_t old=*target;
+        unsigned r=(((p>>16)&255u)*a+((old>>16)&255u)*(255-a))/255u;
+        unsigned g=(((p>>8)&255u)*a+((old>>8)&255u)*(255-a))/255u;
+        unsigned b=((p&255u)*a+(old&255u)*(255-a))/255u;
+        *target=0xff000000u|(r<<16)|(g<<8)|b;
     }
 }
 void app_render(const App *a,uint32_t*d,unsigned s){
@@ -133,7 +96,7 @@ void app_render(const App *a,uint32_t*d,unsigned s){
         if(a->game.selected==i)tc=a->light?0xd8dcfb:0x303859;
         fill(d,s,px,py,CELL,CELL,tc);
         border(d,s,px,py,CELL,CELL,frame);
-        piece(d,s,px,py,a->game.cell[y][x],a->light);
+        piece(d,s,px+2,py+2,a->game.cell[y][x],a->light);
         if(a->game.cursor==i) {
             border(d,s,px-1,py-1,CELL+2,CELL+2,a->accent);
             border(d,s,px+1,py+1,CELL-2,CELL-2,a->accent);

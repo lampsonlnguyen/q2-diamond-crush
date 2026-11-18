@@ -34,9 +34,9 @@ int main(void){
         assert(game_has_move(&g));
     }
     assert(app_input(&a,"w -18"));
-    assert(a.game.cursor==18);
+    assert(a.game.cursor==(ROWS/2)*COLS+COLS/2+1);
     assert(app_input(&a,"k u 218"));
-    assert(a.game.selected==18);
+    assert(a.game.selected==(ROWS/2)*COLS+COLS/2+1);
     assert(a.game.sound==4); /* selection sound requested */
     assert(app_input(&a,"k u 170"));
     assert(a.game.paused);

@@ -82,10 +82,14 @@ void app_render(const App *a,uint32_t*d,unsigned s){
     uint32_t dim=a->light?0x646978:0xa1a8bb;
     uint32_t border_c=a->light?0xadb4c2:0x354259;
     fill(d,s,0,0,SCREEN_W,SCREEN_H,bg);
+    /* Small, theme-neutral header: thinking cat and diamond only.
+       The old promotional mockup's suited figure is intentionally omitted. */
     fill(d,s,36,7,303,40,panel);
-    text(d,s,76,12,"DIAMOND CRUSH",2,ink);
-    text(d,s,41,33,"Q2 POD",1,dim);
-    text(d,s,235,33,"ENDLESS MATCH 3",1,dim);
+    piece(d,s,41,9,0,a->light);
+    text(d,s,82,12,"DIAMOND CRUSH",2,ink);
+    piece(d,s,298,9,1,a->light);
+    text(d,s,82,35,"Q2 POD",1,dim);
+    text(d,s,232,35,"ENDLESS MATCH 3",1,dim);
     text(d,s,40,50,"SCORE",1,dim);
     number(d,s,40,61,a->game.score,1,ink);
     text(d,s,284,50,"BEST",1,dim);

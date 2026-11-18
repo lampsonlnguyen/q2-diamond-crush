@@ -40,6 +40,35 @@ static int read_light(const uint32_t*d,unsigned stride){
     }
     return bright>count/2;
 }
+static int config_light(int fallback) {
+    char data[4096];
+    int fd=(int)sc(SYS_OPEN,(long)"/mnt/data/config.ini",O_CLOEXEC,0,0,0,0);
+    if(fd<0)return fallback;
+    long n=sc(SYS_READ,fd,(long)data,sizeof data-1,0,0,0,0);
+    sc(SYS_CLOSE,fd,0,0,0,0,0);
+    if(n<=0)return fallback;
+    data[n]=0;
+    int ipod=0;
+    for(char *p=data;*p;) {
+        char *end=p;while(*end&&*end!='\n')end++;
+        char *q=p;while(q<end&&(*q==' '||*q=='\t'))q++;
+        if(q<end&&*q=='[') {
+            const char tag[]="[IPOD]";
+            int i=0;while(i<6&&q+i<end&&q[i]==tag[i])i++;
+            ipod=i==6;
+        } else if(ipod && end-q>=5 && q[0]=='L'&&q[1]=='I'&&q[2]=='G'&&q[3]=='H'&&q[4]=='T') {
+            q+=5;while(q<end&&(*q==' '||*q=='\t'))q++;
+            if(q<end&&*q++=='=') {
+                while(q<end&&(*q==' '||*q=='\t'))q++;
+                if(q<end&&*q=='0')return 0;
+                if(q<end&&*q=='1')return 1;
+                return fallback; /* Auto: inherit the current display. */
+            }
+        }
+        p=*end?end+1:end;
+    }
+    return fallback;
+}
 int q2_main(void){
     unsigned var[40],fix[17];
     int fb=(int)sc(SYS_OPEN,(long)"/dev/fb0",O_RDWR|O_CLOEXEC,0,0,0,0);
@@ -54,7 +83,7 @@ int q2_main(void){
     if(mapped<0&&mapped>=-4095)return 1;
     uint32_t *pixels=(uint32_t*)mapped;int fd=input_open();
     if(fd<0)return 1;
-    app_init(&a,now_ms(),0);a.light=read_light(pixels+front*stride,stride);
+    app_init(&a,now_ms(),0);a.light=config_light(read_light(pixels+front*stride,stride));
     unsigned visible=front;
     int can_pan=rows>=2*SCREEN_W&&(front==0||front==SCREEN_W);
     struct {int fd;short events,revents;} poller={fd,1,0};

@@ -13,11 +13,15 @@ $(CARD)/q2-diamond-crush: $(patsubst %.c,build/q2/%.o,$(SRC) src/platform_q2.c)
 $(CARD)/q2app: q2app
 	@mkdir -p $(@D)
 	cp $< $@
+$(CARD)/sounds.stamp: assets/sounds/select.wav assets/sounds/match.wav assets/sounds/combo.wav assets/sounds/invalid.wav
+	@mkdir -p $(CARD)/sounds
+	cp assets/sounds/*.wav $(CARD)/sounds/
+	@touch $@
 $(CARD)/LICENSE: LICENSE
 	@mkdir -p $(@D)
 	cp $< $@
-dist/q2-diamond-crush.zip: $(CARD)/q2-diamond-crush $(CARD)/q2app $(CARD)/LICENSE
-	cd dist && zip -q q2-diamond-crush.zip .diamond-crush/q2-diamond-crush .diamond-crush/q2app .diamond-crush/LICENSE
+dist/q2-diamond-crush.zip: $(CARD)/q2-diamond-crush $(CARD)/q2app $(CARD)/LICENSE $(CARD)/sounds.stamp
+	cd dist && zip -q q2-diamond-crush.zip .diamond-crush/q2-diamond-crush .diamond-crush/q2app .diamond-crush/LICENSE .diamond-crush/sounds/*.wav
 build/test: tests/test.c $(SRC) src/app.h src/game.h
 	@mkdir -p $(@D)
 	$(CC) -std=c11 -O2 -Wall -Wextra -Werror -Isrc -o $@ tests/test.c $(SRC)

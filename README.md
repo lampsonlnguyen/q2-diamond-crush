@@ -35,4 +35,4 @@ Created in appreciation of DiamondBond's work on Q2 Pod. The card-app platform i
 
 ## Audio
 
-Audio effects are planned, but this initial build does not yet open the Q2 ALSA output. The card runs without interrupting existing music playback.
+Four short, original 22.05 kHz mono PCM WAV effects are provided in `assets/sounds/` and packaged under `.diamond-crush/sounds/`. Playback is **not yet connected** to ALSA on hardware; sound support needs a Q2 audio backend and has not been verified.

@@ -78,14 +78,20 @@ void app_render(const App *a,uint32_t*d,unsigned s){
     uint32_t dim=a->light?0x646978:0xa1a8bb;
     uint32_t border_c=a->light?0xadb4c2:0x354259;
     fill(d,s,0,0,SCREEN_W,SCREEN_H,bg);
-    /* Small, theme-neutral header: thinking cat and diamond only.
-       The old promotional mockup's suited figure is intentionally omitted. */
-    fill(d,s,36,7,303,40,panel);
+    /* Keep the two small PNG sprites; draw the high-contrast banner in C.
+       Light mode uses a dark navy header so white title and cat remain clear. */
+    uint32_t banner_bg=a->light?0x243652:panel;
+    uint32_t banner_ink=a->light?0xffffff:ink;
+    uint32_t banner_sub=a->light?0xdbe6f5:dim;
+    uint32_t banner_edge=a->light?0x54759c:border_c;
+    fill(d,s,36,7,303,40,banner_bg);
+    border(d,s,36,7,303,40,banner_edge);
+    fill(d,s,37,45,301,2,a->light?0x53cbd9:0x53658e);
     piece(d,s,41,9,0,a->light);
-    text(d,s,82,12,"DIAMOND CRUSH",2,ink);
+    text(d,s,82,12,"DIAMOND CRUSH",2,banner_ink);
     piece(d,s,298,9,1,a->light);
-    text(d,s,82,35,"Q2 POD",1,dim);
-    text(d,s,232,35,"ENDLESS MATCH 3",1,dim);
+    text(d,s,82,35,"Q2 POD",1,banner_sub);
+    text(d,s,232,35,"ENDLESS MATCH 3",1,banner_sub);
     text(d,s,40,50,"SCORE",1,dim);
     number(d,s,40,61,a->game.score,1,ink);
     text(d,s,284,50,"BEST",1,dim);

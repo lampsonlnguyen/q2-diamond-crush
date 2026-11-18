@@ -2,7 +2,7 @@
 #ifndef DIAMOND_GAME_H
 #define DIAMOND_GAME_H
 #include <stdint.h>
-#define COLS 7
+#define COLS 8
 #define ROWS 5
 #define CELLS (COLS * ROWS)
 #define TYPES 6

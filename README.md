@@ -39,7 +39,7 @@ The sysroot must contain `usr/include/alsa/asoundlib.h` and `lib/libasound.so.2`
 
 Run `make check && make` to create `dist/q2-diamond-crush.zip`. The MIPS binary has **no Python or PNG dependency on the Q2**; it does link against the firmware's existing shared audio libraries.
 
-GitHub Actions runs portable tests on every push. Device ZIP builds and tag releases run only when the repository variable `Q2_SYSROOT_URL` points to a trusted sysroot archive with `lib/` and `usr/` at its root. Do not publicly redistribute proprietary stock-firmware libraries.
+GitHub Actions runs portable tests, builds a Q2 sysroot from the checked-in `fw/Q2 Firmware V1.36.zip` using DiamondBond's Rockbox sysroot helper, and packages the installable game ZIP. Pushing a `v*` tag automatically creates a GitHub Release with `q2-diamond-crush.zip`. The old `Q2_SYSROOT_URL` variable is no longer required. **Stock firmware may contain proprietary code; do not redistribute the firmware ZIP or extracted libraries without permission.**
 
 ## Architecture
 

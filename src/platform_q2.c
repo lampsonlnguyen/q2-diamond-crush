@@ -1,19 +1,18 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later
  * Q2 native frame and datagram input contract, adapted from q2-arcade.
- * Firmware-owned audio is enabled by q2app, with samples in assets/.
+ * Audio is handed over by the firmware to an ALSA worker.
  */
 #include "app.h"
+#include "audio.h"
+#include <signal.h>
 long sc(long n,long a,long b,long c,long d,long e,long f);
 __asm__(".text\n.set noreorder\n.globl sc\nsc:\n"
 "move $2, $4\nmove $4, $5\nmove $5, $6\nmove $6, $7\n"
 "lw $7, 16($29)\nlw $8, 20($29)\nlw $9, 24($29)\n"
 "addiu $29, $29, -32\nsw $8, 16($29)\nsw $9, 20($29)\n"
-"syscall\naddiu $29, $29, 32\nbeqz $7, 1f\nnop\n"
-"subu $2, $0, $2\n1: jr $31\nnop\n"
-".globl __start\n__start:\nlw $4, 0($29)\naddiu $5, $29, 4\n"
-"li $8, -8\nand $29, $29, $8\naddiu $29, $29, -32\n"
-"jal q2_main\nnop\nmove $4, $2\nli $2, 4246\nsyscall\n"
-"1: b 1b\nnop\n.set reorder\n");
+"syscall\naddiu $29, $29, 32\n"
+"beqz $7, 1f\nnop\nsubu $2, $0, $2\n1: jr $31\nnop\n"
+".set reorder\n");
 enum { SYS_READ=4003,SYS_OPEN=4005,SYS_CLOSE=4006,SYS_UNLINK=4010,
  SYS_IOCTL=4054,SYS_MMAP=4090,SYS_MUNMAP=4091,SYS_BIND=4169,
  SYS_RECV=4175,SYS_SOCKET=4183,SYS_POLL=4188,SYS_CLOCK_GETTIME=4263,
@@ -21,8 +20,6 @@ enum { SYS_READ=4003,SYS_OPEN=4005,SYS_CLOSE=4006,SYS_UNLINK=4010,
  O_RDWR=2,O_CLOEXEC=0x80000,MSG_DONTWAIT=0x40 };
 #define SOCK "/tmp/q2-diamond-crush.input.sock"
 static App a;
-void *memset(void *p,int c,__SIZE_TYPE__ n){unsigned char*q=p;while(n--)*q++=(unsigned char)c;return p;}
-void *memcpy(void *p,const void*q,__SIZE_TYPE__ n){unsigned char*d=p;const unsigned char*s=q;while(n--)*d++=*s++;return p;}
 static unsigned now_ms(void){long t[2]={0};sc(SYS_CLOCK_GETTIME,1,(long)t,0,0,0,0);return (unsigned)t[0]*1000u+(unsigned)t[1]/1000000u;}
 static int input_open(void){
     struct {unsigned short family;char path[108];} addr={1,SOCK};
@@ -69,7 +66,11 @@ static int config_light(int fallback) {
     }
     return fallback;
 }
-int q2_main(void){
+static volatile sig_atomic_t stopping;
+static void on_term(int signal) { (void)signal; stopping = 1; }
+int main(int argc, char **argv){
+    signal(SIGTERM,on_term);
+    signal(SIGINT,on_term);
     unsigned var[40],fix[17];
     int fb=(int)sc(SYS_OPEN,(long)"/dev/fb0",O_RDWR|O_CLOEXEC,0,0,0,0);
     if(fb<0)return 1;
@@ -84,15 +85,18 @@ int q2_main(void){
     uint32_t *pixels=(uint32_t*)mapped;int fd=input_open();
     if(fd<0)return 1;
     app_init(&a,now_ms(),0);a.light=config_light(read_light(pixels+front*stride,stride));
+    /* Firmware passes the selected audio device and soft output volume. */
+    (void)audio_start(argc>0?argv[0]:"",argc>1?argv[1]:0,argc>2?argv[2]:0);
     unsigned visible=front;
     int can_pan=rows>=2*SCREEN_W&&(front==0||front==SCREEN_W);
     struct {int fd;short events,revents;} poller={fd,1,0};
     unsigned previous=now_ms();
     int redraw=1;
-    while(!a.game.quit) {
+    while(!a.game.quit && !stopping) {
         unsigned now=now_ms(),elapsed=now-previous;previous=now;
         if(elapsed>40)elapsed=40;
         if(app_tick(&a,elapsed))redraw=1;
+        if(a.game.sound){audio_play(a.game.sound);a.game.sound=0;}
         if(redraw){
             unsigned target=can_pan?(visible?0:SCREEN_W):visible;
             app_render(&a,pixels+target*stride,stride);
@@ -107,10 +111,15 @@ int q2_main(void){
         if(ready<0||!(poller.revents&1))break;
         char msg[64];
         long n=sc(SYS_RECV,fd,(long)msg,sizeof msg-1,MSG_DONTWAIT,0,0);
-        if(n>0){msg[n]=0;if(app_input(&a,msg))redraw=1;}
+        if(n>0){
+            msg[n]=0;
+            if(app_input(&a,msg))redraw=1;
+            if(a.game.sound){audio_play(a.game.sound);a.game.sound=0;}
+        }
     }
+    audio_stop();
     if(visible!=front){var[5]=front;sc(SYS_IOCTL,fb,FB_PAN,(long)var,0,0,0);}
     sc(SYS_CLOSE,fd,0,0,0,0,0);sc(SYS_UNLINK,(long)SOCK,0,0,0,0,0);
     sc(SYS_MUNMAP,mapped,(long)fix[5],0,0,0,0);sc(SYS_CLOSE,fb,0,0,0,0,0);
-    return a.game.quit?0:1;
+    return a.game.quit||stopping?0:1;
 }

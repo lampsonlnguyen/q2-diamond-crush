@@ -18,6 +18,15 @@ with out.open("w", encoding="utf-8") as handle:
         image = Image.open(root / "assets" / "sprites" / (name + ".png")).convert("RGBA")
         if image.size != (32, 32):
             raise ValueError(f"{name}: expected 32x32 PNG, got {image.size}")
+        if name == "ipod":
+            # Remove transparent padding so the player fills its 32px tile.
+            box = image.getchannel("A").getbbox()
+            if box:
+                sprite = image.crop(box)
+                scale = min(32 / sprite.width, 32 / sprite.height)
+                sprite = sprite.resize((round(sprite.width * scale), round(sprite.height * scale)), Image.Resampling.NEAREST)
+                image = Image.new("RGBA", (32, 32))
+                image.paste(sprite, ((32 - sprite.width) // 2, (32 - sprite.height) // 2))
         pixels = list(image.getdata())
         handle.write("  { /* " + name + " */\n")
         for i in range(0, len(pixels), 8):

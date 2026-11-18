@@ -32,7 +32,9 @@ static int index(char c){
     if(c>='a'&&c<='z')c-=32;
     if(c>='A'&&c<='Z')return c-'A';
     if(c>='0'&&c<='9')return c-'0'+26;
-    if(c=='!')return 37;if(c=='-')return 38;if(c=='.')return 39;
+    if(c=='!')return 37;
+    if(c=='-')return 38;
+    if(c=='.')return 39;
     return 36;
 }
 static void text(uint32_t*d,unsigned s,int x,int y,const char*t,int k,uint32_t c){
@@ -88,13 +90,14 @@ void app_render(const App *a,uint32_t*d,unsigned s){
     number(d,s,40,61,a->game.score,1,ink);
     text(d,s,284,50,"BEST",1,dim);
     number(d,s,284,61,a->game.best,1,ink);
-    for(int y=0;y<BOARD;y++)for(int x=0;x<BOARD;x++){
-        int i=y*BOARD+x,px=GRID_X+x*PITCH,py=GRID_Y+y*PITCH+12;
+    for(int y=0;y<ROWS;y++)for(int x=0;x<COLS;x++){
+        int i=y*COLS+x,px=GRID_X+x*PITCH,py=GRID_Y+y*PITCH;
         uint32_t tc=tile,frame=border_c;
         if(a->game.selected==i)tc=a->light?0xd8dcfb:0x303859;
         fill(d,s,px,py,CELL,CELL,tc);
         border(d,s,px,py,CELL,CELL,frame);
-        piece(d,s,px+2,py+2,a->game.cell[y][x],a->light);
+        if(!a->animation || (i!=a->swap_a && i!=a->swap_b))
+            piece(d,s,px+2,py+2,a->game.cell[y][x],a->light);
         if(a->game.cursor==i) {
             border(d,s,px-1,py-1,CELL+2,CELL+2,a->accent);
             border(d,s,px+1,py+1,CELL-2,CELL-2,a->accent);
@@ -103,6 +106,20 @@ void app_render(const App *a,uint32_t*d,unsigned s){
             fill(d,s,px+2,py+2,4,4,a->accent);
             fill(d,s,px+CELL-6,py+CELL-6,4,4,a->accent);
         }
+    }
+    if(a->animation) {
+        unsigned duration=a->animation==1?180:140;
+        unsigned t=a->animation_ms>duration?duration:a->animation_ms;
+        /* Integer smoothstep easing; no floating point or extra frame buffers. */
+        int u=(int)(t*256/duration);
+        int progress=u*u*(768-2*u)/65536;
+        if(a->animation==2)progress=256-progress;
+        int from=a->swap_a,to=a->swap_b;
+        int fx=GRID_X+(from%COLS)*PITCH+2,fy=GRID_Y+(from/COLS)*PITCH+2;
+        int tx=GRID_X+(to%COLS)*PITCH+2,ty=GRID_Y+(to/COLS)*PITCH+2;
+        int dx=(tx-fx)*progress/256,dy=(ty-fy)*progress/256;
+        piece(d,s,tx-dx,ty-dy,a->game.cell[to/COLS][to%COLS],a->light);
+        piece(d,s,fx+dx,fy+dy,a->game.cell[from/COLS][from%COLS],a->light);
     }
     text(d,s,54,302,"WHEEL SELECT  CENTER SWAP  BACK PAUSE",1,dim);
     if(a->game.paused){

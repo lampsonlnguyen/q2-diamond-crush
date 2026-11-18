@@ -2,10 +2,12 @@
 #ifndef DIAMOND_GAME_H
 #define DIAMOND_GAME_H
 #include <stdint.h>
-#define BOARD 6
+#define COLS 7
+#define ROWS 5
+#define CELLS (COLS * ROWS)
 #define TYPES 6
 typedef struct {
-    uint8_t cell[BOARD][BOARD];
+    uint8_t cell[ROWS][COLS];
     uint32_t seed, score, best, swaps;
     int cursor, selected, paused, quit, sound;
 } Game;

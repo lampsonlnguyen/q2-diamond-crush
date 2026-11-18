@@ -87,8 +87,12 @@ int q2_main(void){
     unsigned visible=front;
     int can_pan=rows>=2*SCREEN_W&&(front==0||front==SCREEN_W);
     struct {int fd;short events,revents;} poller={fd,1,0};
+    unsigned previous=now_ms();
     int redraw=1;
     while(!a.game.quit) {
+        unsigned now=now_ms(),elapsed=now-previous;previous=now;
+        if(elapsed>40)elapsed=40;
+        if(app_tick(&a,elapsed))redraw=1;
         if(redraw){
             unsigned target=can_pan?(visible?0:SCREEN_W):visible;
             app_render(&a,pixels+target*stride,stride);
@@ -98,8 +102,8 @@ int q2_main(void){
             }
             redraw=0;
         }
-        long ready=sc(SYS_POLL,(long)&poller,1,-1,0,0,0);
-        if(ready==-4)continue;
+        long ready=sc(SYS_POLL,(long)&poller,1,a.animation&&!a.game.paused?16:-1,0,0,0);
+        if(ready==0||ready==-4)continue;
         if(ready<0||!(poller.revents&1))break;
         char msg[64];
         long n=sc(SYS_RECV,fd,(long)msg,sizeof msg-1,MSG_DONTWAIT,0,0);

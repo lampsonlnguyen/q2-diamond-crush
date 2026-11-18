@@ -23,7 +23,13 @@ Download `q2-diamond-crush.zip` and extract the hidden `.diamond-crush` folder t
 
 ## Build
 
-On Ubuntu/WSL: `sudo apt install clang lld gcc make python3 python3-pil zip`; then `make check && make`. The output is `dist/q2-diamond-crush.zip`. A tag such as `v1.0.0` publishes a GitHub Release with that ZIP.
+On Ubuntu/WSL, install `clang lld gcc make python3 python3-pil zip`. The portable game tests run with `make check`, without any device dependencies.
+
+For `make`, install a **Shanling Q2 V1.36 sysroot** at `~/.cache/q2/sysroot`. As with [Q2 Groovebox](https://github.com/DiamondBond/q2-groovebox), prepare it from your own stock firmware ZIP using Rockbox's `tools/shanlingq2/mksysroot.sh`. It must contain `usr/include/alsa/asoundlib.h` and `lib/libasound.so.2`. A different location can be selected with `make SYSROOT=/path/to/sysroot`. The sysroot provides the device's glibc, ALSA, pthreads and dynamic loader.
+
+Run `make check && make` to create `dist/q2-diamond-crush.zip`. The MIPS binary has **no Python or PNG dependency on the Q2**; it does link against the firmware's existing shared audio libraries.
+
+GitHub Actions runs portable tests on every push. Device ZIP builds and tag releases run only when the repository variable `Q2_SYSROOT_URL` points to a trusted sysroot archive with `lib/` and `usr/` at its root. Do not publicly redistribute proprietary stock-firmware libraries.
 
 ## Architecture
 
@@ -35,7 +41,16 @@ Created in appreciation of DiamondBond's work on Q2 Pod. The card-app platform i
 
 ## Audio
 
-Four short, original 22.05 kHz mono PCM WAV effects are provided in `assets/sounds/` and packaged under `.diamond-crush/sounds/`. Playback is **not yet connected** to ALSA on hardware; sound support needs a Q2 audio backend and has not been verified.
+The app now requests the firmware's sound output with `audio=1` and plays four original effects:
+
+- `select.wav` — select a tile or begin a swap
+- `invalid.wav` — a swap that does not make a match
+- `match.wav` — a successful match
+- `combo.wav` — cascading matches
+
+`src/audio.c` reads the 22.05 kHz mono WAVs once from `.diamond-crush/sounds/`, plays them as 44.1 kHz stereo through ALSA, and accepts sound events without blocking touch or wheel input. It follows Groovebox's USB/Bluetooth output selection, soft-volume curve, DAC mute handling, and busy-PCM retry policy. **Q2 Pod 1.7.2 or later** is needed for the firmware audio handoff. If ALSA cannot open the device, the game remains playable without sound. Sound playback has not yet been tested on physical Q2 hardware.
+
+The firmware stops normal music playback when handing the audio output to a sound-enabled card game.
 
 ## Art asset workflow
 

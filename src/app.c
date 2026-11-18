@@ -35,7 +35,7 @@ int app_input(App *a,const char *message) {
         if(steps)g->cursor=(g->cursor+steps%36+36)%36;
         return steps!=0;
     }
-    if(message[2]!=' ' || message[3]!=' ')return 0;
+    if(!message[2] || message[3]!=' ')return 0;
     const char *p=message+4;int x=value(&p);
     if(message[0]=='k' && message[2]=='u') {
         if(x==BACK) {
